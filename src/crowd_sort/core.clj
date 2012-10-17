@@ -2,31 +2,73 @@
   (:require [appengine-magic.core :as ae])
   (:use [hiccup.core]))
 
-(defn get-list-to-sort []
-  [1 2 3 4 5])
+;; Get from queue
+(defn get-new-list []
+  (def current-list (map int (take 10 (map rand (repeat 10))))))
 
-(defn get-identifier [])
+;; Database + memcache
+(defn get-list []
+  current-list)
+
+;; Get from memcache (probably)
+(defn get-identifier []
+  (int (rand 1000000)))
+
+(defn get-lock-id [idx]
+  )
+
+(defn get-index []
+  (int (rand (count (get-list)))))
 
 (defn get-and-lock-index [id]
-  (int (rand 10000)))
+  (let [idx ]
+    (if (get-lock-id idx)
+      ;; try another one...
+      )))
 
 (defn get-two-available-indexes [id]
   [(get-and-lock-index id) (get-and-lock-index id)])
 
 (defn is-lock-held [i j id])
 
-(defn swap-values [i j])
+(defn list-sorted? []
+  ;; number of keeps == (length list)
+  )
+
+(defn reset-keep-counter [])
+
+(defn inc-keep-counter [])
+
+(defn keep-values [i j]
+  (inc-keep-counter)
+  )
+
+(defn swap-values [i j]
+  (reset-keep-counter)
+  )
 
 (defn unlock-indexes [i j])
 
 (defn swap? [action]
   (= "swap" action))
 
+(defn invalidate-all-locks [])
+
+(defn notify-list-owner [])
+
+(defn process-sorted-list []
+  (if (list-sorted?)
+    ((invalidate-all-locks)
+     (reset-keep-counter)
+     (notify-list-owner)
+     (get-new-list))))
+
 (defn process-action [i j id action]
   (if (is-lock-held i j id)
     (if (swap? action)
       (swap-values i j)
-      )
+      ((keep-values i j)
+       (process-sorted-list)))
     (unlock-indexes i j)))
 
 (defn get-value [idx]
