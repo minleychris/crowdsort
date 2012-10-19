@@ -4,7 +4,7 @@
 
 ;; Get from queue
 (defn get-new-list []
-  (def current-list (map int (take 10 (map rand (repeat 10))))))
+  (def current-list (map #(* 1000 (inc %)) (take 10 (map rand-int (repeat 10))))))
 
 ;; Database + memcache
 (defn get-list []
@@ -17,19 +17,10 @@
 (defn get-lock-id [idx]
   )
 
-(defn get-index []
-  (int (rand (count (get-list)))))
+(defn lock-index [idx]
+  )
 
-(defn get-and-lock-index [id]
-  (let [idx ]
-    (if (get-lock-id idx)
-      ;; try another one...
-      )))
-
-(defn get-two-available-indexes [id]
-  [(get-and-lock-index id) (get-and-lock-index id)])
-
-(defn is-lock-held [i j id])
+(defn unlock-indexes [i j])
 
 (defn list-sorted? []
   ;; number of keeps == (length list)
@@ -39,6 +30,31 @@
 
 (defn inc-keep-counter [])
 
+(defn invalidate-all-locks [])
+
+;; Email
+(defn notify-list-owner [])
+
+;; Misc
+
+(defn is-not-locked? [idx]
+  (nil? (get-lock-id idx)))
+
+(defn get-all-indexes []
+  (shuffle (range 0 (count (get-list)))))
+
+(defn get-and-lock-index [id]
+  (let [idx (first (filter is-not-locked? (get-all-indexes)))]
+    ;; if idx is nil?
+    (lock-index idx)
+    idx))
+
+(defn get-two-available-indexes [id]
+  [(get-and-lock-index id) (get-and-lock-index id)])
+
+(defn is-lock-held [i j id]
+  (= (get-lock-id i) (get-lock-id j) id))
+
 (defn keep-values [i j]
   (inc-keep-counter)
   )
@@ -47,14 +63,8 @@
   (reset-keep-counter)
   )
 
-(defn unlock-indexes [i j])
-
 (defn swap? [action]
   (= "swap" action))
-
-(defn invalidate-all-locks [])
-
-(defn notify-list-owner [])
 
 (defn process-sorted-list []
   (if (list-sorted?)
@@ -72,15 +82,16 @@
     (unlock-indexes i j)))
 
 (defn get-value [idx]
-  4)
+  (nth (get-list) idx))
 
 (defn get-items-to-swap [id]
-  (let [indexes (get-two-available-indexes id)]
-    (zipmap indexes (map get-value indexes))))
+  (let [[idx1 idx2] (get-two-available-indexes id)]
+    [{:index idx1 :value (get-value idx1)}
+     {:index idx2 :value (get-value idx2)}]))
 
 (defn swap-or-not-page []
   (let [id (get-identifier)
-        [i1 v1 i2 v2] (get-items-to-swap id)]
+        [{i1 :index v1 :value} {i2 :index v2 :value}] (get-items-to-swap id)]
     (html
      [:div (str v1 " " v2)]
      [:form
@@ -90,8 +101,6 @@
       [:input {:name "action" :value "swap" :type "submit"}]
       [:input {:name "action" :value "keep" :type "submit"}]])))
            
-          
-
 (defn crowd-sort-app-handler [request]
   {:status 200
    :headers {"Content-Type" "text/plain"}
@@ -99,5 +108,3 @@
 
 
 (ae/def-appengine-app crowd-sort-app #'crowd-sort-app-handler)
-
-
