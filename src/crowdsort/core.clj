@@ -8,6 +8,8 @@
 
 ;; Database + memcache
 (defn get-list []
+  (if (not (bound? #'current-list))
+    (get-new-list))
   current-list)
 
 ;; Get from memcache (probably)
@@ -103,7 +105,7 @@
            
 (defn crowdsort-app-handler [request]
   {:status 200
-   :headers {"Content-Type" "text/plain"}
+   :headers {"Content-Type" "text/html"}
    :body (swap-or-not-page)})
 
 
