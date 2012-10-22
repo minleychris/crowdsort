@@ -1,16 +1,21 @@
 (ns crowdsort.core
-  (:require [appengine-magic.core :as ae])
+  (:require [appengine-magic.core :as ae]
+            [appengine-magic.services.memcache :as memcache])
   (:use [hiccup.core]))
 
 ;; Get from queue
 (defn get-new-list []
-  (def current-list (map #(* 1000 (inc %)) (take 10 (map rand-int (repeat 10))))))
+  ;; FIXME: turn this into proper logging
+  (println "Getting a new list")
+  ;; FIXME: why does this give us a different list everytime? Could this indicate deeper problems?
+  ;;(memcache/put! "current-list" (seq (map #(* 1000 (inc %)) (take 10 (map rand-int (repeat 10)))))))
+  (memcache/put! "current-list" '(1 2 3 4 5)))
 
 ;; Database + memcache
 (defn get-list []
-  (if (not (bound? #'current-list))
+  (if (not (memcache/contains? "current-list"))
     (get-new-list))
-  current-list)
+  (memcache/get "current-list"))
 
 ;; Get from memcache (probably)
 (defn get-identifier []
@@ -101,7 +106,8 @@
       [:input {:name "index1" :value i1 :type "hidden"}]
       [:input {:name "index2" :value i2 :type "hidden"}]
       [:input {:name "action" :value "swap" :type "submit"}]
-      [:input {:name "action" :value "keep" :type "submit"}]])))
+      [:input {:name "action" :value "keep" :type "submit"}]]
+     [:div (str "Current list:" (seq (get-list)))])))
            
 (defn crowdsort-app-handler [request]
   {:status 200
