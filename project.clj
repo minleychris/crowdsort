@@ -1,5 +1,5 @@
-(defproject crowd_sort "1.0.0-SNAPSHOT"
-  :description "FIXME: write description"
+(defproject crowdsort "1.0.0"
+  :description "Crowdsort"
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [compojure "1.1.3"]
                  [hiccup "1.0.1"]]

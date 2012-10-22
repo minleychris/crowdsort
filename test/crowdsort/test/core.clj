@@ -1,5 +1,5 @@
-(ns crowd_sort.test.core
-  (:use [crowd_sort.core])
+(ns crowdsort.test.core
+  (:use [crowdsort.core])
   (:use [clojure.test]))
 
 (deftest replace-me ;; FIXME: write

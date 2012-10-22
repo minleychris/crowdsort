@@ -1,4 +1,4 @@
-(ns crowd-sort.core
+(ns crowdsort.core
   (:require [appengine-magic.core :as ae])
   (:use [hiccup.core]))
 
@@ -101,10 +101,10 @@
       [:input {:name "action" :value "swap" :type "submit"}]
       [:input {:name "action" :value "keep" :type "submit"}]])))
            
-(defn crowd-sort-app-handler [request]
+(defn crowdsort-app-handler [request]
   {:status 200
    :headers {"Content-Type" "text/plain"}
    :body (swap-or-not-page)})
 
 
-(ae/def-appengine-app crowd-sort-app #'crowd-sort-app-handler)
+(ae/def-appengine-app crowdsort-app #'crowdsort-app-handler)
