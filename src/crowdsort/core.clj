@@ -1,7 +1,8 @@
 (ns crowdsort.core
   (:require [appengine-magic.core :as ae]
             [appengine-magic.services.memcache :as memcache])
-  (:use [hiccup.core]))
+  (:use [hiccup.core]
+        [compojure.core]))
 
 ;; Get from queue
 (defn get-new-list []
@@ -9,7 +10,7 @@
   (println "Getting a new list")
   ;; FIXME: why does this give us a different list everytime? Could this indicate deeper problems?
   ;;(memcache/put! "current-list" (seq (map #(* 1000 (inc %)) (take 10 (map rand-int (repeat 10)))))))
-  (memcache/put! "current-list" '(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)))
+  (memcache/put! "current-list" [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20]))
 
 ;; Database + memcache
 (defn get-list []
@@ -52,6 +53,11 @@
 (defn invalidate-all-locks []
   (map #(memcache/delete! (get-lock-key %)) (range 0 (count (get-list)))))
 
+(defn swap-values [i j]
+  (reset-keep-counter)
+  (let [list (get-list)]
+    (memcache/put! "current-list" (-> list (assoc i (list j)) (assoc j (list i))))))
+
 ;; Email
 (defn notify-list-owner [])
 
@@ -81,10 +87,6 @@
   (inc-keep-counter)
   )
 
-(defn swap-values [i j]
-  (reset-keep-counter)
-  )
-
 (defn swap? [action]
   (= "swap" action))
 
@@ -111,7 +113,6 @@
     [{:index idx1 :value (get-value idx1)}
      {:index idx2 :value (get-value idx2)}]))
 
-;; FIXME: for some reasons, this seems to be hit twice on a pageview.
 (defn swap-or-not-page []
   (let [id (get-identifier)
         [{i1 :index v1 :value} {i2 :index v2 :value}] (get-items-to-swap id)]
@@ -125,11 +126,24 @@
       [:input {:name "action" :value "swap" :type "submit"}]
       [:input {:name "action" :value "keep" :type "submit"}]]
      [:div (str "Current list:" (seq (get-list)))])))
-           
-(defn crowdsort-app-handler [request]
-  {:status 200
-   :headers {"Content-Type" "text/html"}
-   :body (swap-or-not-page)})
 
+(defn handle-post [params]
+  ;;do things
+  (println params)
+  (swap-or-not-page))
+
+(defroutes crowdsort-app-handler
+  (GET "/" req
+       {:status 200
+        :headers {"Content-Type" "text/html"}
+        :body (swap-or-not-page)})
+  (POST "/" {params :params}
+       {:status 200
+        :headers {"Content-Type" "text/html"}
+        :body (handle-post params)})
+  (ANY "*" _
+       {:status 200
+        :headers {"Content-Type" "text/plain"}
+        :body "not found"}))
 
 (ae/def-appengine-app crowdsort-app #'crowdsort-app-handler)
