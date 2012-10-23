@@ -9,7 +9,7 @@
   (println "Getting a new list")
   ;; FIXME: why does this give us a different list everytime? Could this indicate deeper problems?
   ;;(memcache/put! "current-list" (seq (map #(* 1000 (inc %)) (take 10 (map rand-int (repeat 10)))))))
-  (memcache/put! "current-list" '(1 2 3 4 5)))
+  (memcache/put! "current-list" '(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)))
 
 ;; Database + memcache
 (defn get-list []
@@ -19,25 +19,38 @@
 
 ;; Get from memcache (probably)
 (defn get-identifier []
-  (int (rand 1000000)))
+  (let [id (rand-int 1000000)]
+    (println (str "get-identifier " id))
+    id))
+
+(defn get-lock-key [idx]
+  (str "index:" idx))
 
 (defn get-lock-id [idx]
-  )
+  (memcache/get (get-lock-key idx)))
 
-(defn lock-index [idx]
-  )
+(defn lock-index [idx id]
+  (memcache/put! (get-lock-key idx) id :expiration (. com.google.appengine.api.memcache.Expiration byDeltaSeconds 30)))
 
-(defn unlock-indexes [i j])
+(defn unlock-index [idx]
+  (memcache/delete! (get-lock-key idx)))
+
+(defn unlock-indexes [i j]
+  (unlock-index i)
+  (unlock-index j))
 
 (defn list-sorted? []
-  ;; number of keeps == (length list)
-  )
+  (>= (memcache/get "keeps")
+     (count (get-list))))
 
-(defn reset-keep-counter [])
+(defn reset-keep-counter []
+  (memcache/put! "keeps" 0))
 
-(defn inc-keep-counter [])
+(defn inc-keep-counter []
+  (memcache/increment! "keeps" 1))
 
-(defn invalidate-all-locks [])
+(defn invalidate-all-locks []
+  (map #(memcache/delete! (get-lock-key %)) (range 0 (count (get-list)))))
 
 ;; Email
 (defn notify-list-owner [])
@@ -45,6 +58,7 @@
 ;; Misc
 
 (defn is-not-locked? [idx]
+  (println (str "is-not-locked? " idx ": " (nil? (get-lock-id idx)) " by " (get-lock-id idx)))
   (nil? (get-lock-id idx)))
 
 (defn get-all-indexes []
@@ -52,8 +66,9 @@
 
 (defn get-and-lock-index [id]
   (let [idx (first (filter is-not-locked? (get-all-indexes)))]
+    (println (str "get-and-lock-index idx: " idx))
     ;; if idx is nil?
-    (lock-index idx)
+    (lock-index idx id)
     idx))
 
 (defn get-two-available-indexes [id]
@@ -96,12 +111,14 @@
     [{:index idx1 :value (get-value idx1)}
      {:index idx2 :value (get-value idx2)}]))
 
+;; FIXME: for some reasons, this seems to be hit twice on a pageview.
 (defn swap-or-not-page []
   (let [id (get-identifier)
         [{i1 :index v1 :value} {i2 :index v2 :value}] (get-items-to-swap id)]
+    (println (str "swap-or-not-page " id " " v1 " " v2))
     (html
      [:div (str v1 " " v2)]
-     [:form
+     [:form {:method "POST"}
       [:input {:name "identifier" :value id :type "hidden"}]
       [:input {:name "index1" :value i1 :type "hidden"}]
       [:input {:name "index2" :value i2 :type "hidden"}]
