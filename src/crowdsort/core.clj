@@ -7,9 +7,7 @@
 
 ;; Get from queue
 (defn get-new-list []
-  ;; FIXME: why does this give us a different list everytime? Could this indicate deeper problems?
-  ;(println "New list!")
-  (let [new-list  (doall (seq (take 10 (map rand-int (repeat 10)))))]
+  (let [new-list (vec (seq (take 10 (map rand-int (repeat 10)))))]
     (memcache/put! "current-list" new-list)))
 
 ;; Database + memcache
@@ -58,8 +56,8 @@
 
 (defn swap-values [i j]
   (reset-keep-counter)
-  (let [list (get-list)]
-    (memcache/put! "current-list" (-> list (assoc i (list j)) (assoc j (list i))))))
+  (let [new-list (get-list)]
+    (memcache/put! "current-list" (-> new-list (assoc i (new-list j)) (assoc j (new-list i))))))
 
 ;; Email
 (defn notify-list-owner [])
