@@ -129,36 +129,36 @@
                    "/crowdsort.css")]
      [:body
       [:div.row-fluid
-       [:div.span3.hidden-phone.hidden-tablet {:id "left-col"}
+       [:div.span2.hidden-phone.hidden-tablet {:id "left-col"}
         "left-col"]
 
-       [:div.span5.container-fluid.visible-phone.visible-tablet.visible-desktop
+       [:div.span7.container-fluid.visible-phone.visible-tablet.visible-desktop
         [:div.row-fluid
-         [:div.page-header.span5
+         [:div.page-header.span7
           [:h1 "Crowdsort"
            [:small " O(∞), Ω(1)"]]]]
 
         [:div.row-fluid.sort-values-row
-         [:div.span1.offset1 [:span.sort-value.badge v1]]
-         [:div.span1.offset1 [:span.sort-value.badge v2]]]
+         [:div.span3.offset2
+          [:span.sort-value.badge v1]
+          [:span.value-spacer]
+          [:span.sort-value.badge v2]]]
 
         [:div.row-fluid
-         [:div.span1.offset1
+         [:div.span3.offset2
           [:form {:method "POST"}
            [:input {:name "identifier" :value id :type "hidden"}]
            [:input {:name "index1" :value i1 :type "hidden"}]
            [:input {:name "index2" :value i2 :type "hidden"}]
-           [:input.btn.btn-primary.btn-medium {:name "action" :value "keep" :type "submit"}]]]
-         [:div.span1.offset1
-          [:input.btn.btn-primary.btn-medium {:name "action" :value "swap" :type "submit"}]]]
+           [:input.btn.btn-primary.btn-medium {:name "action" :value "keep" :type "submit"}]
+           [:input.btn.btn-primary.btn-medium {:name "action" :value "swap" :type "submit"}]]]]
 
-        [:div.list-row
+        [:div.list-row [:div.row-fluid
+          [:div.span7.text-info "You are currently sorting:"]]
          [:div.row-fluid
-          [:div.span5.text-info "You are currently sorting:"]]
-         [:div.row-fluid
-          [:div.span5 [:code (format-list-to-display (get-list))]]]]]]
+          [:div.span7 [:code (format-list-to-display (get-list))]]]]]]
 
-      [:div.span4.hidden-phone.hidden-tablet {:id "right-col"}
+      [:div.span3.hidden-phone.hidden-tablet {:id "right-col"}
        "right-col"]
       (include-js "http://code.jquery.com/jquery-latest.js" "/bootstrap/js/bootstrap.min.js")])))
 
