@@ -1,0 +1,24 @@
+/* Bootstrap overrides */
+.container-fluid {
+  margin-right: auto;
+  margin-left: auto;
+/*  max-width: 480px; */
+}
+
+.btn {
+    margin-left: 3px;
+}
+
+.row-fluid {
+    text-align: center;
+}
+/* Misc */
+.sort-values-row {
+    margin-bottom: 2em;
+}
+.list-row {
+    margin-top: 2em;
+}
+.sort-value {
+    font-size: 400%;
+}

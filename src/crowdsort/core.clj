@@ -1,8 +1,9 @@
 (ns crowdsort.core
   (:require [appengine-magic.core :as ae]
             [appengine-magic.services.memcache :as memcache])
-  (:use [hiccup.core]
+  (:use [hiccup core page]
         [compojure.core]
+        [compojure.route :as route]
         [ring.middleware.params :only [wrap-params]]))
 
 ;; Get from queue
@@ -112,18 +113,54 @@
     [{:index idx1 :value (get-value idx1)}
      {:index idx2 :value (get-value idx2)}]))
 
+(defn format-list-to-display [a-list]
+  ;; FIXME: Return something line [0 1 2 ... 998 999 1000]
+  (str a-list))
+
 (defn swap-or-not-page []
   (let [id (get-identifier)
         [{i1 :index v1 :value} {i2 :index v2 :value}] (get-items-to-swap id)]
-    (html
-     [:div (str v1 " " v2)]
-     [:form {:method "POST"}
-      [:input {:name "identifier" :value id :type "hidden"}]
-      [:input {:name "index1" :value i1 :type "hidden"}]
-      [:input {:name "index2" :value i2 :type "hidden"}]
-      [:input {:name "action" :value "swap" :type "submit"}]
-      [:input {:name "action" :value "keep" :type "submit"}]]
-     [:div (str "Current list:" (seq (get-list)))])))
+    (html5
+     [:head
+      [:title "Crowdsort"]
+      [:meta {:name "viewport" :content "width=768px, initial-scale=1.0"}]
+      (include-css "/bootstrap/css/bootstrap.min.css"
+                   "/bootstrap/css/bootstrap-responsive.min.css"
+                   "/crowdsort.css")]
+     [:body
+      [:div.row-fluid
+       [:div.span3.hidden-phone.hidden-tablet {:id "left-col"}
+        "left-col"]
+
+       [:div.span5.container-fluid.visible-phone.visible-tablet.visible-desktop
+        [:div.row-fluid
+         [:div.page-header.span5
+          [:h1 "Crowdsort"
+           [:small " O(∞), Ω(1)"]]]]
+
+        [:div.row-fluid.sort-values-row
+         [:div.span1.offset1 [:span.sort-value.badge v1]]
+         [:div.span1.offset1 [:span.sort-value.badge v2]]]
+
+        [:div.row-fluid
+         [:div.span1.offset1
+          [:form {:method "POST"}
+           [:input {:name "identifier" :value id :type "hidden"}]
+           [:input {:name "index1" :value i1 :type "hidden"}]
+           [:input {:name "index2" :value i2 :type "hidden"}]
+           [:input.btn.btn-primary.btn-medium {:name "action" :value "keep" :type "submit"}]]]
+         [:div.span1.offset1
+          [:input.btn.btn-primary.btn-medium {:name "action" :value "swap" :type "submit"}]]]
+
+        [:div.list-row
+         [:div.row-fluid
+          [:div.span5.text-info "You are currently sorting:"]]
+         [:div.row-fluid
+          [:div.span5 [:code (format-list-to-display (get-list))]]]]]]
+
+      [:div.span4.hidden-phone.hidden-tablet {:id "right-col"}
+       "right-col"]
+      (include-js "http://code.jquery.com/jquery-latest.js" "/bootstrap/js/bootstrap.min.js")])))
 
 (defn handle-post [{action "action" index1 "index1" index2 "index2"  id "identifier"}]
   (process-action (Integer/parseInt index1) (Integer/parseInt index2) (Integer/parseInt id) action)
@@ -139,9 +176,10 @@
         {:status 200
          :headers {"Content-Type" "text/html"}
          :body (handle-post params)})
-  (ANY "*" _
-       {:status 404
-        :headers {"Content-Type" "text/plain"}
-        :body "not found"}))
+  (route/resources "/")
+  (route/not-found
+   {:status 404
+    :headers {"Content-Type" "text/plain"}
+    :body "not found"}))
 
 (ae/def-appengine-app crowdsort-app (wrap-params crowdsort-app-handler))
