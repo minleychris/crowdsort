@@ -129,8 +129,7 @@
                    "/crowdsort.css")]
      [:body
       [:div.row-fluid
-       [:div.span2.hidden-phone.hidden-tablet {:id "left-col"}
-        "left-col"]
+       [:div.span2.hidden-phone.hidden-tablet {:id "left-col"}]
 
        [:div.span7.container-fluid.visible-phone.visible-tablet.visible-desktop
         [:div.row-fluid
@@ -158,8 +157,7 @@
          [:div.row-fluid
           [:div.span7 [:code (format-list-to-display (get-list))]]]]]]
 
-      [:div.span3.hidden-phone.hidden-tablet {:id "right-col"}
-       "right-col"]
+      [:div.span3.hidden-phone.hidden-tablet {:id "right-col"}]
       (include-js "http://code.jquery.com/jquery-latest.js" "/bootstrap/js/bootstrap.min.js")])))
 
 (defn handle-post [{action "action" index1 "index1" index2 "index2"  id "identifier"}]
