@@ -2,7 +2,8 @@
   (:require [appengine-magic.core :as ae]
             [appengine-magic.services.memcache :as memcache])
   (:use [hiccup.core]
-        [compojure.core]))
+        [compojure.core]
+        [ring.middleware.params :only [wrap-params]]))
 
 ;; Get from queue
 (defn get-new-list []
@@ -21,7 +22,6 @@
 ;; Get from memcache (probably)
 (defn get-identifier []
   (let [id (rand-int 1000000)]
-    (println (str "get-identifier " id))
     id))
 
 (defn get-lock-key [idx]
@@ -40,9 +40,13 @@
   (unlock-index i)
   (unlock-index j))
 
+(defn number-of-keeps []
+  (memcache/put! "keeps" 0 :policy :add-if-not-present)
+  (memcache/get "keeps"))
+
 (defn list-sorted? []
-  (>= (memcache/get "keeps")
-     (count (get-list))))
+  (>= (number-of-keeps)
+      (count (get-list))))
 
 (defn reset-keep-counter []
   (memcache/put! "keeps" 0))
@@ -64,7 +68,6 @@
 ;; Misc
 
 (defn is-not-locked? [idx]
-  (println (str "is-not-locked? " idx ": " (nil? (get-lock-id idx)) " by " (get-lock-id idx)))
   (nil? (get-lock-id idx)))
 
 (defn get-all-indexes []
@@ -72,13 +75,12 @@
 
 (defn get-and-lock-index [id]
   (let [idx (first (filter is-not-locked? (get-all-indexes)))]
-    (println (str "get-and-lock-index idx: " idx))
-    ;; if idx is nil?
+    ;; FIXME: what if idx is nil?
     (lock-index idx id)
     idx))
 
 (defn get-two-available-indexes [id]
-  [(get-and-lock-index id) (get-and-lock-index id)])
+  (sort [(get-and-lock-index id) (get-and-lock-index id)]))
 
 (defn is-lock-held [i j id]
   (= (get-lock-id i) (get-lock-id j) id))
@@ -92,18 +94,18 @@
 
 (defn process-sorted-list []
   (if (list-sorted?)
-    ((invalidate-all-locks)
+    (do (invalidate-all-locks)
      (reset-keep-counter)
      (notify-list-owner)
      (get-new-list))))
 
 (defn process-action [i j id action]
   (if (is-lock-held i j id)
-    (if (swap? action)
-      (swap-values i j)
-      ((keep-values i j)
-       (process-sorted-list)))
-    (unlock-indexes i j)))
+    (do (if (swap? action)
+          (swap-values i j)
+          (do (keep-values i j)
+              (process-sorted-list)))
+        (unlock-indexes i j))))
 
 (defn get-value [idx]
   (nth (get-list) idx))
@@ -116,7 +118,6 @@
 (defn swap-or-not-page []
   (let [id (get-identifier)
         [{i1 :index v1 :value} {i2 :index v2 :value}] (get-items-to-swap id)]
-    (println (str "swap-or-not-page " id " " v1 " " v2))
     (html
      [:div (str v1 " " v2)]
      [:form {:method "POST"}
@@ -127,10 +128,10 @@
       [:input {:name "action" :value "keep" :type "submit"}]]
      [:div (str "Current list:" (seq (get-list)))])))
 
-(defn handle-post [params]
-  ;;do things
-  (println params)
-  (swap-or-not-page))
+(defn handle-post [{action "action" index1 "index1" index2 "index2"  id "identifier"}]
+  (process-action (Integer/parseInt index1) (Integer/parseInt index2) (Integer/parseInt id) action)
+  (swap-or-not-page)
+  )
 
 (defroutes crowdsort-app-handler
   (GET "/" req
@@ -138,12 +139,12 @@
         :headers {"Content-Type" "text/html"}
         :body (swap-or-not-page)})
   (POST "/" {params :params}
-       {:status 200
-        :headers {"Content-Type" "text/html"}
-        :body (handle-post params)})
+        {:status 200
+         :headers {"Content-Type" "text/html"}
+         :body (handle-post params)})
   (ANY "*" _
-       {:status 200
+       {:status 404
         :headers {"Content-Type" "text/plain"}
         :body "not found"}))
 
-(ae/def-appengine-app crowdsort-app #'crowdsort-app-handler)
+(ae/def-appengine-app crowdsort-app (wrap-params crowdsort-app-handler))
