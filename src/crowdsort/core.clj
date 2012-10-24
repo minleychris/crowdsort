@@ -1,7 +1,8 @@
 (ns crowdsort.core
   (:require [appengine-magic.core :as ae]
-            [appengine-magic.services.memcache :as memcache])
-  (:use [hiccup core page]
+            [appengine-magic.services.memcache :as memcache]
+            [appengine-magic.services.user :as user])
+  (:use [hiccup core page element]
         [compojure.core]
         [compojure.route :as route]
         [ring.middleware.params :only [wrap-params]]))
@@ -105,6 +106,9 @@
               (process-sorted-list)))
         (unlock-indexes i j))))
 
+(defn process-submitted-array []
+  )
+
 (defn get-value [idx]
   (nth (get-list) idx))
 
@@ -116,6 +120,34 @@
 (defn format-list-to-display [a-list]
   ;; FIXME: Return something line [0 1 2 ... 998 999 1000]
   (str a-list))
+
+(defn submit-new-list-page []
+  (html5
+   [:head
+    [:title "Crowdsort - submit new array"]
+    [:meta {:name "viewport" :content "width=768px, initial-scale=1.0"}]
+    (include-css "/bootstrap/css/bootstrap.min.css"
+                 "/bootstrap/css/bootstrap-responsive.min.css"
+                 "/crowdsort.css")]
+   [:body
+    [:div.row-fluid
+     [:div.span2.hidden-phone.hidden-tablet {:id "left-col"}]
+
+     [:div.span7.container-fluid.visible-phone.visible-tablet.visible-desktop
+      [:div.row-fluid
+       [:div.page-header.span7
+        [:h1 "Crowdsort"
+         [:small " O(∞), Ω(1)"]]
+        [:h3 "Submit an array!"]]]
+
+      [:div.row-fluid
+       [:div.span7
+        ;; FIXME: auto-increasing number of input fields
+        "Split items with one or more spaces:"
+        [:form {:method "POST"}
+         [:input {:name "array" :type "text"}]
+         [:input.btn.btn-primary {:name "submit" :value "submit" :type "submit"}]]]]
+      ]]]))
 
 (defn swap-or-not-page []
   (let [id (get-identifier)
@@ -155,15 +187,31 @@
         [:div.list-row [:div.row-fluid
           [:div.span7.text-info "You are currently sorting:"]]
          [:div.row-fluid
-          [:div.span7 [:code (format-list-to-display (get-list))]]]]]]
+          [:div.span7 [:code (format-list-to-display (get-list))]]]]]
 
-      [:div.span3.hidden-phone.hidden-tablet {:id "right-col"}]
+      [:div.span3.hidden-phone.hidden-tablet {:id "right-col"}]]
+
+      [:div.row-fluid
+       [:div.span7.offset2.pull-left
+        (if (user/user-logged-in?)
+          (do
+            [:div
+             [:div.clearfix (link-to "/submit" "Submit an array for sorting")]
+             [:div.clearfix (link-to (user/logout-url) "Logout")]]
+            )
+          (link-to (user/login-url) "Login to submit an array!"))]]
+
       (include-js "http://code.jquery.com/jquery-latest.js" "/bootstrap/js/bootstrap.min.js")])))
 
 (defn handle-post [{action "action" index1 "index1" index2 "index2"  id "identifier"}]
   (process-action (Integer/parseInt index1) (Integer/parseInt index2) (Integer/parseInt id) action)
   (swap-or-not-page)
   )
+
+(defn handle-submit []
+  ;; Stuff...
+  (process-submitted-array)
+  (submit-new-list-page))
 
 (defroutes crowdsort-app-handler
   (GET "/" req
@@ -174,6 +222,15 @@
         {:status 200
          :headers {"Content-Type" "text/html"}
          :body (handle-post params)})
+  (GET "/submit" req
+       {:status 200
+        :headers {"Content-Type" "text/html"}
+        :body (submit-new-list-page)})
+  (POST "/submit" {params :params}
+        {:status 200
+         :headers {"Content-Type" "text/html"}
+         :body (handle-submit params)})
+
   (route/resources "/")
   (route/not-found
    {:status 404
