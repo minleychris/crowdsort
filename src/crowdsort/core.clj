@@ -7,11 +7,10 @@
 
 ;; Get from queue
 (defn get-new-list []
-  ;; FIXME: turn this into proper logging
-  (println "Getting a new list")
   ;; FIXME: why does this give us a different list everytime? Could this indicate deeper problems?
-  ;;(memcache/put! "current-list" (seq (map #(* 1000 (inc %)) (take 10 (map rand-int (repeat 10)))))))
-  (memcache/put! "current-list" [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20]))
+  ;(println "New list!")
+  (let [new-list  (doall (seq (take 10 (map rand-int (repeat 10)))))]
+    (memcache/put! "current-list" new-list)))
 
 ;; Database + memcache
 (defn get-list []
