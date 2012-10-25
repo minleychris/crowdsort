@@ -7,6 +7,7 @@
         [hiccup core page element]
         [compojure.core]
         [compojure.route :as route]
+        [ring.util.response :only [redirect]]
         [ring.middleware.params :only [wrap-params]]))
 
 (ds/defentity ListToSort [elements owner-email submission-time])
@@ -219,9 +220,9 @@
   (swap-or-not-page)
   )
 
-(defn handle-submit [{ array "array"}]
+(defn handle-submit [{array "array"}]
   (process-submitted-array array)
-  (swap-or-not-page))
+  (redirect "/"))
 
 (defroutes crowdsort-app-handler
   (GET "/" req
@@ -229,17 +230,13 @@
         :headers {"Content-Type" "text/html"}
         :body (swap-or-not-page)})
   (POST "/" {params :params}
-        {:status 200
-         :headers {"Content-Type" "text/html"}
-         :body (handle-post params)})
+        (handle-post params))
   (GET "/submit" req
        {:status 200
         :headers {"Content-Type" "text/html"}
         :body (submit-new-list-page)})
   (POST "/submit" {params :params}
-        {:status 200
-         :headers {"Content-Type" "text/html"}
-         :body (handle-submit params)})
+        (handle-submit params))
 
   (route/resources "/")
   (route/not-found
