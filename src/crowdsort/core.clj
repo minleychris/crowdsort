@@ -19,6 +19,7 @@
                      ;; In the absence of any lists on the datastore, let's get a random one
                      (ListToSort. (vec (seq (take 10 (map rand-int (repeat 10)))))
                                   nil (.getTime (java.util.Date.))))]
+    ;; FIXME: remove current ListToSort from datastore when we fetch a new one!
     (memcache/put! "current-list" (:elements new-list))
     (memcache/put! "current-list-owner-email" (:owner-email new-list))))
 
@@ -80,12 +81,13 @@
   (let [email-addr (get-list-owner-email)]
     (if (and (not (nil? email-addr))
              (not (empty? email-addr)))
-      (do (println "Sending email to " (get-list-owner-email))
-          (let [msg (mail/make-message :from "crowdsort@isnomore.net"
-                                      :to email-addr
-                                      :subject "Your list has been crowdsorted!"
-                                      :text-body (str "We are glad to inform that your list has been crowsorted. Here it is:\n" (format-list-to-display (get-list))))]
-            mail/send msg)))))
+      ;; FIXME: send this from an account like crowdsort@crowdsort.appspotmail.com
+      (let [msg (mail/make-message :from "rbp@isnomore.net"
+                                   :to email-addr
+                                   :subject "Your list has been crowdsorted!"
+                                   :text-body (str "We are glad to inform that your list has been crowsorted. Here it is:\n" (format-list-to-display (get-list))))]
+        (println "Sending email to " email-addr ":\n" msg)
+        (mail/send msg)))))
 
 ;; Misc
 
@@ -97,8 +99,8 @@
 
 (defn get-and-lock-index [id]
   (let [idx (first (filter is-not-locked? (get-all-indexes)))]
-    ;; FIXME: what if idx is nil?
-    (lock-index idx id)
+    (if (not (nil? idx))
+      (lock-index idx id))
     idx))
 
 (defn get-two-available-indexes [id]
@@ -142,8 +144,10 @@
 
 (defn get-items-to-swap [id]
   (let [[idx1 idx2] (get-two-available-indexes id)]
-    [{:index idx1 :value (get-value idx1)}
-     {:index idx2 :value (get-value idx2)}]))
+    (if (some nil? [idx1 idx2])
+      nil
+      [{:index idx1 :value (get-value idx1)}
+       {:index idx2 :value (get-value idx2)}])))
 
 (defn format-list-to-display [a-list]
   ;; FIXME: Add a parameter to return something line [0 1 2 ... 998 999 1000]
