@@ -2,7 +2,8 @@
   (:require [appengine-magic.core :as ae]
             [appengine-magic.services.memcache :as memcache]
             [appengine-magic.services.user :as user]
-            [appengine-magic.services.datastore :as ds])
+            [appengine-magic.services.datastore :as ds]
+            [appengine-magic.services.mail :as mail])
   (:use [clojure.string :only [join split]]
         [hiccup core page element]
         [compojure.core]
@@ -18,13 +19,17 @@
                      ;; In the absence of any lists on the datastore, let's get a random one
                      (ListToSort. (vec (seq (take 10 (map rand-int (repeat 10)))))
                                   nil (.getTime (java.util.Date.))))]
-    (memcache/put! "current-list" (:elements new-list))))
+    (memcache/put! "current-list" (:elements new-list))
+    (memcache/put! "current-list-owner-email" (:owner-email new-list))))
 
 ;; Get from memcache
 (defn get-list []
   (if (not (memcache/contains? "current-list"))
     (get-new-list))
   (memcache/get "current-list"))
+
+(defn get-list-owner-email []
+  (memcache/get "current-list-owner-email"))
 
 (defn get-identifier []
   (let [id (rand-int 1000000)]
@@ -69,7 +74,15 @@
     (memcache/put! "current-list" (-> new-list (assoc i (new-list j)) (assoc j (new-list i))))))
 
 ;; Email
-(defn notify-list-owner [])
+(declare format-list-to-display)
+
+(defn notify-list-owner []
+  (if (not (nil? (get-list-owner-email)))
+    (println "Sending email to " (get-list-owner-email))
+    (let [msg (mail/make-message :from "crowdsort@isnomore.net"
+                                 :to (get-list-owner-email)
+                                 :subject "Your list has been crowdsorted!"
+                                 :text-body (str "We are glad to inform that your list has been crowsorted. Here it is:\n" (format-list-to-display (get-list))))])))
 
 ;; Misc
 
@@ -130,7 +143,7 @@
      {:index idx2 :value (get-value idx2)}]))
 
 (defn format-list-to-display [a-list]
-  ;; FIXME: Return something line [0 1 2 ... 998 999 1000]
+  ;; FIXME: Add a parameter to return something line [0 1 2 ... 998 999 1000]
   (str "[" (join " " a-list) "]"))
 
 (defn submit-new-list-page []
