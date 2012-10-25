@@ -84,7 +84,8 @@
           (let [msg (mail/make-message :from "crowdsort@isnomore.net"
                                       :to email-addr
                                       :subject "Your list has been crowdsorted!"
-                                      :text-body (str "We are glad to inform that your list has been crowsorted. Here it is:\n" (format-list-to-display (get-list))))])))))
+                                      :text-body (str "We are glad to inform that your list has been crowsorted. Here it is:\n" (format-list-to-display (get-list))))]
+            mail/send msg)))))
 
 ;; Misc
 
