@@ -77,12 +77,14 @@
 (declare format-list-to-display)
 
 (defn notify-list-owner []
-  (if (not (nil? (get-list-owner-email)))
-    (println "Sending email to " (get-list-owner-email))
-    (let [msg (mail/make-message :from "crowdsort@isnomore.net"
-                                 :to (get-list-owner-email)
-                                 :subject "Your list has been crowdsorted!"
-                                 :text-body (str "We are glad to inform that your list has been crowsorted. Here it is:\n" (format-list-to-display (get-list))))])))
+  (let [email-addr (get-list-owner-email)]
+    (if (and (not (nil? email-addr))
+             (not (empty? email-addr)))
+      (do (println "Sending email to " (get-list-owner-email))
+          (let [msg (mail/make-message :from "crowdsort@isnomore.net"
+                                      :to email-addr
+                                      :subject "Your list has been crowdsorted!"
+                                      :text-body (str "We are glad to inform that your list has been crowsorted. Here it is:\n" (format-list-to-display (get-list))))])))))
 
 ;; Misc
 
