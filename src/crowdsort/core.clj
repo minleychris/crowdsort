@@ -1,24 +1,30 @@
 (ns crowdsort.core
   (:require [appengine-magic.core :as ae]
             [appengine-magic.services.memcache :as memcache]
-            [appengine-magic.services.user :as user])
-  (:use [hiccup core page element]
+            [appengine-magic.services.user :as user]
+            [appengine-magic.services.datastore :as ds])
+  (:use [clojure.string :only [join split]]
+        [hiccup core page element]
         [compojure.core]
         [compojure.route :as route]
         [ring.middleware.params :only [wrap-params]]))
 
-;; Get from queue
-(defn get-new-list []
-  (let [new-list (vec (seq (take 10 (map rand-int (repeat 10)))))]
-    (memcache/put! "current-list" new-list)))
+(ds/defentity ListToSort [elements owner-email submission-time])
 
-;; Database + memcache
+;; Get from the datastore and set to memcache
+(defn get-new-list []
+  (let [new-list (or (first (ds/query :kind ListToSort :sort [:submission-time]))
+                     ;; In the absence of any lists on the datastore, let's get a random one
+                     (ListToSort. (vec (seq (take 10 (map rand-int (repeat 10)))))
+                                  nil (.getTime (java.util.Date.))))]
+    (memcache/put! "current-list" (:elements new-list))))
+
+;; Get from memcache
 (defn get-list []
   (if (not (memcache/contains? "current-list"))
     (get-new-list))
   (memcache/get "current-list"))
 
-;; Get from memcache (probably)
 (defn get-identifier []
   (let [id (rand-int 1000000)]
     id))
@@ -106,8 +112,13 @@
               (process-sorted-list)))
         (unlock-indexes i j))))
 
-(defn process-submitted-array []
-  )
+(defn process-submitted-array [array]
+  ;; FIXME: notify user if things don't go well
+  (if (user/user-logged-in?)
+    (let [new-list (split array #"\s+")]
+      (if (not (empty? new-list))
+        (let [list-to-sort (ListToSort. new-list (.getEmail (user/current-user)) (.getTime (java.util.Date.)))]
+          (ds/save! list-to-sort))))))
 
 (defn get-value [idx]
   (nth (get-list) idx))
@@ -119,7 +130,7 @@
 
 (defn format-list-to-display [a-list]
   ;; FIXME: Return something line [0 1 2 ... 998 999 1000]
-  (str a-list))
+  (str "[" (join " " a-list) "]"))
 
 (defn submit-new-list-page []
   (html5
@@ -208,10 +219,9 @@
   (swap-or-not-page)
   )
 
-(defn handle-submit []
-  ;; Stuff...
-  (process-submitted-array)
-  (submit-new-list-page))
+(defn handle-submit [{ array "array"}]
+  (process-submitted-array array)
+  (swap-or-not-page))
 
 (defroutes crowdsort-app-handler
   (GET "/" req
