@@ -13,7 +13,7 @@
 
 (ds/defentity ListToSort [elements owner-email submission-time])
 
-;; Get from the datastore and set to memcache
+;; Datastore and memcache
 (defn get-new-list []
   (let [new-list (or (first (ds/query :kind ListToSort :sort [:submission-time]))
                      ;; In the absence of any lists on the datastore, let's get a random one
@@ -22,6 +22,9 @@
     ;; FIXME: remove current ListToSort from datastore when we fetch a new one!
     (memcache/put! "current-list" (:elements new-list))
     (memcache/put! "current-list-owner-email" (:owner-email new-list))))
+
+(defn delete-current-list-object []
+  )
 
 ;; Get from memcache
 (defn get-list []
@@ -118,10 +121,12 @@
 
 (defn process-sorted-list []
   (if (list-sorted?)
-    (do (invalidate-all-locks)
-     (reset-keep-counter)
-     (notify-list-owner)
-     (get-new-list))))
+    (do
+      (notify-list-owner)
+      (invalidate-all-locks)
+      (reset-keep-counter)
+      (delete-current-list-object)
+      (get-new-list))))
 
 (defn process-action [i j id action]
   (if (is-lock-held i j id)
