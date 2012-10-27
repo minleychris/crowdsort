@@ -28,7 +28,8 @@
   (let [current-list-object (first (ds/query :kind ListToSort :sort [:submission-time]))]
     ;; FIXME: this is a hack. Let's have a better way of indicating whether the list is submitted
     ;; or randomly generated.
-    (if (not (nil? (get-list-owner-email)))
+    (if (and (not (nil? current-list-object))
+             (not (nil? (get-list-owner-email))))
       (ds/delete! current-list-object))))
 
 ;; Get from memcache
