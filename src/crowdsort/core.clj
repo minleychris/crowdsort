@@ -23,9 +23,11 @@
     (memcache/put! "current-list" (:elements new-list))
     (memcache/put! "current-list-owner-email" (:owner-email new-list))))
 
+(declare get-list-owner-email)
 (defn delete-current-list-object []
   (let [current-list-object (first (ds/query :kind ListToSort :sort [:submission-time]))]
-    (ds/delete! current-list-object)))
+    (if (not (nil? (get-list-owner-email)))
+      (ds/delete! current-list-object))))
 
 ;; Get from memcache
 (defn get-list []
